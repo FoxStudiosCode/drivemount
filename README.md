@@ -49,23 +49,56 @@ flowchart TD
 - `curl` (for health checks) and `rsync` (for syncing local changes back)
 - `git`, to clone the repository
 
-## 1. Get the scripts from GitHub
+## Installation
+
+### Option 1: Git clone
+
+Clone the repository:
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd <repo-name>
-chmod +x install.sh drivemount.sh drivemount_wrapper.sh
+git clone https://github.com/<USERNAME>/<REPOSITORY>.git
+cd <REPOSITORY>
 ```
 
-> Replace `<your-username>/<repo-name>` with the actual repository path.
+Make the installation script executable:
 
-## 2. Run the installer
+```bash
+chmod +x install.sh
+```
+
+Start the installation:
 
 ```bash
 ./install.sh
 ```
 
-`install.sh` will:
+---
+
+### Option 2: GitHub ZIP download
+
+Download the repository as a ZIP file.
+
+Unzip the ZIP file:
+
+```bash
+unzip <REPOSITORY>.zip
+cd <REPOSITORY>
+```
+
+Make the installation script executable:
+
+```bash
+chmod +x install.sh
+```
+
+Start the installation:
+
+```bash
+./install.sh
+```
+
+---
+
 
 1. Ask for confirmation if you run it as root (it's meant for **per-user**
    installs, not root).
@@ -199,42 +232,6 @@ systemctl --user daemon-reload
 Your data remains safe in the hidden shadow folders (`~/.<localdir>`)
 after running `drivemount.sh -d`.
 
-## ⚠️ Known issues observed in the current scripts
-
-A few things in the uploaded scripts look like they'll cause problems and
-are worth fixing/testing before relying on this for important data:
-
-- **`drivemount.sh: run()`** — the line
-  `mount_drive && directory_sync || printf "..." ; exit 1` always runs
-  `exit 1` regardless of success, because the `; exit 1` is unconditional
-  rather than part of the `||` chain. As written, `run()` will exit before
-  reaching `set_symlinks_to_remote`, and the wrapper's
-  `"$script" && systemd-notify --ready ...` will treat every run as a
-  failure.
-- **`drivemount.sh`** — several functions (`dir_check`,
-  `set_symlinks_to_remote`, `set_symlink_to_local`, `local_files_exist`,
-  `directory_sync`) reference a `$homedir` variable that is never set
-  anywhere in the script (only `$HOME` is). This will likely resolve to
-  empty paths.
-- **`install.sh: write_config_to_files`** — the `/etc/fstab` line is
-  written with the literal text `<TAB>` instead of an actual tab
-  character, which will produce a malformed fstab entry.
-- **`install.sh: create_mountpoint`** — uses `$mouninfo['username']`
-  (typo for `mountinfo`), which won't resolve correctly.
-- **`install.sh: systemd_finisher`** — calls `systemd --user ...`; this
-  should be `systemctl --user ...`.
-- **`install.sh: copy_executables`** — `chmod +x "${localbin_dir}/drivemount*.sh"`
-  is quoted, so the `*` glob won't expand and the command will fail to
-  find that literal filename.
-- **`install.sh: pre_run`** — `... || printf "..." exit 1` is missing a
-  `;` before `exit 1`, so `exit 1` is passed as another argument to
-  `printf` instead of being executed — a failed `davfs2` install won't
-  actually abort the script.
-- **`install.sh: get_dir_mapping`** — uses `while $true; do`; this should
-  be `while true; do` (without `$`), since `$true` expands to nothing.
-
-None of these are addressed in this README — they're listed here so
-they're easy to find and fix in the scripts themselves.
 
 ## Author
 
