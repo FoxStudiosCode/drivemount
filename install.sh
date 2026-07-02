@@ -78,8 +78,8 @@ function pre_run() {
 }
 
 function davfs_reconfig() {
-    echo "davfs2 davfs2/suid_file boolean true" | debconf-set-selections
-    sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure davfs2
+    echo "davfs2 davfs2/suid_file boolean true" | sudo debconf-set-selections
+    sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure davfs2 < "yes"
 }
 
 function get_user_input() {
