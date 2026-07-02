@@ -78,8 +78,8 @@ function pre_run() {
 }
 
 function davfs_reconfig() {
-    echo "davfs2 davfs2/suid_file boolean true" | sudo debconf-set-selections
-    sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure davfs2 < "yes"
+    echo "davfs2 davfs2/suid_file boolean true" | sudo debconf-set-selections 
+    sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure davfs2
 }
 
 function get_user_input() {
@@ -109,7 +109,7 @@ function write_config_to_files() {
     # writing secret file
     chk_mk_dir "$davfs_dir"
     echo "# added automatically by drive mount service installation script" >> $davfs_secret_file
-    printf "https://${mountinfo["domain"]}/remote.php/webdav\t${mountinfo["username"]}\t${mountinfo["password"]}" >> $davfs_secret_file
+    printf "https://${mountinfo["domain"]}/remote.php/webdav\t${mountinfo["username"]}\t${mountinfo["password"]}\n" >> $davfs_secret_file
     chmod 600 "$davfs_secret_file"
 
     # write mapping
@@ -185,6 +185,7 @@ function systemd_finisher() {
     # systemctl --user start "${mountinfo['username']}@${mountinfo['domain']}.service" > not feasable due to the users session not having the proper group yet
     printf "\nThe Service has been installed and enabled.\nIt will start with the next login.\n"
 }
+
 
 function post_run() {
     create_mountpoint
