@@ -25,7 +25,7 @@ service_dir="${HOME}/.config/systemd/user"
 localbin_dir="${HOME}/.local/bin"
 localshare_dir="${HOME}/.local/share"
 config_file_name="drive_mount_config.sh"
-davfs_dir="${HOME}/.davfs2"
+davfs_dir="${HOME}.davfs2"
 davfs_secret_file="${davfs_dir}/secrets"
 run_as_root="false"
 username="$(whoami)"
@@ -51,6 +51,13 @@ while true; do
   sudo -n true
   sleep 60
 done 2>/dev/null &
+
+# utils
+function chk_mk_dir() {
+    if [ "$#" -eq 1 ]; then
+        mkdir -p "$1"
+    fi
+}
 
 
 # pre run preparations
@@ -100,6 +107,7 @@ function get_dir_mapping() {
 
 function write_config_to_files() {
     # writing secret file
+    chk_mk_dir "$davfs_dir"
     echo "add automatically by drive mount service installation script" >> $davfs_secret_file
     printf "https://${mountinfo["domain"]}/remote.php/webdav\t${mountinfo["username"]}\t${mountinfo["password"]}" >> $davfs_secret_file
     chmod 600 "$davfs_secret_file"
@@ -126,6 +134,7 @@ EOF
 }
 
 function write_service_file() {
+    chk_mk_dir "$service_dir"
     tee "${service_dir}/${mountinfo['username']}@${mountinfo['domain']}.service" > /dev/null <<EOF
 [Unit]
 Description=Mounting WebDav Drive and syncing local data
