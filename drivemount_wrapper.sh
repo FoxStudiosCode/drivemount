@@ -2,7 +2,7 @@
 set -euo pipefail
 
 script="${HOME}/.local/bin/drivemount.sh"
-interval=30
+interval=10
 
 cleanup() {
     "$script" -d || true
