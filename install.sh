@@ -69,11 +69,18 @@ function chk_mk_dir() {
 
 # pre run preparations
 function pre_run() {
-    printf "Installing davfs2 via apt.\n"
-    printf "You will be asked if you want to enable user-level mounting."
-    read "++ Please select \"Yes\"! ++\nPress Enter to continue." null
+    printf "Installing davfs2 via apt..."
+    #printf "You will be asked if you want to enable user-level mounting."
+    #printf "++ Please select \"Yes\"! ++"
+    #read "Press Enter to continue." null
 
-    if ! sudo apt install -y davfs2 -qq; then
+    sudo debconf-set-selections <<EOF
+davfs2 davfs2/suid_file boolean true
+EOF
+
+    if ! sudo apt install -y davfs2 -qq \
+        -o Dpkg::Options::="--force-confdef" \
+        -o Dpkg::Options::="--force-confold"; then
         printf "\nCouldn't install davfs2 via apt. Aborting..\n"
         exit 1
     else
@@ -81,7 +88,7 @@ function pre_run() {
     fi
 
 	sudo usermod -aG davfs2 $USER
-    davfs_reconfig
+    # davfs_reconfig
 	if ! [ -d "$localbin_dir" ]; then
 		mkdir -p "$localbin_dir"
 	fi
@@ -95,7 +102,7 @@ function davfs_reconfig() {
     printf "Reconfiguring davfs2 to make sure user can mount drives.\n\
         Confirm with \"yes\" if promted.\n"
     echo "davfs2 davfs2/suid_file boolean true" | sudo debconf-set-selections
-    sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -y davfs2
+    sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure -f davfs2
 
     # testing alternative method
     #sudo debconfig-set-selections <<EOF
