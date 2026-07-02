@@ -108,7 +108,7 @@ function get_dir_mapping() {
 function write_config_to_files() {
     # writing secret file
     chk_mk_dir "$davfs_dir"
-    echo "add automatically by drive mount service installation script" >> $davfs_secret_file
+    echo "# added automatically by drive mount service installation script" >> $davfs_secret_file
     printf "https://${mountinfo["domain"]}/remote.php/webdav\t${mountinfo["username"]}\t${mountinfo["password"]}" >> $davfs_secret_file
     chmod 600 "$davfs_secret_file"
 
@@ -128,7 +128,7 @@ EOF
 
     sudo tee -a /etc/fstab > /dev/null <<EOF
 # automatically added my drivemount install
-https://${mountinfo['domain']}/remote.php/webdav    ${HOME}/${mountinfo['username']}@${mountinfo['domain']} user,rw,noauto 0   0
+https://${mountinfo['domain']}/remote.php/webdav    ${HOME}/${mountinfo['username']}@${mountinfo['domain']} davfs  user,rw,noauto 0   0
 EOF
 
 }
