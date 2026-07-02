@@ -69,8 +69,12 @@ function chk_mk_dir() {
 
 # pre run preparations
 function pre_run() {
+    davfs_reconfig
     printf "Installing davfs2 via apt..."
-    if ! sudo apt install -y davfs2 >/dev/null 2>&1; then
+    if ! sudo apt install -y davfs2 \
+        -o Dpkg::Options::="--force-confdef" \
+        -o Dpkg::Options::="--force-confold" \
+        >/dev/null 2>&1; then
         printf "\nCouldn't install davfs2 via apt. Aborting..\n"
         exit 1
     else
