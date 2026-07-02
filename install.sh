@@ -52,6 +52,11 @@ while true; do
   sleep 60
 done 2>/dev/null &
 
+sudo_keepalive_pid=$!
+
+trap "kill $sudo_keepalive_pid 2>/dev/null" exit
+
+
 # utils
 function chk_mk_dir() {
     if [ "$#" -eq 1 ]; then
@@ -180,10 +185,14 @@ EOF
 
 function copy_executables() {
     printf "Copying main scripts to ${localbin_dir} ...\t"
-    cp "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/drivemount.sh" "${localbin_dir}/" || \
-        printf "Error copying main script to \"${localbin_dir}\"\n" && exit 1
-    cp "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/drivemount_wrapper.sh" "${localbin_dir}/" || \
-        printf "Error copying wrapper script to \"${localbin_dir}\"\n" && exit 1
+    if ! cp "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/drivemount.sh" "${localbin_dir}/"; then
+        printf "Error copying main script to \"${localbin_dir}\"\n"
+        exit 1
+    fi
+    if ! cp "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/drivemount_wrapper.sh" "${localbin_dir}/"; then
+        printf "Error copying wrapper script to \"${localbin_dir}\"\n"
+        exit 1
+    fi
 	chmod +x "$localbin_dir"/drivemount*.sh
     printf "Done.\n"
 }
@@ -236,8 +245,11 @@ function main() {
 
     get_user_input
     write_config_to_files
-    write_service_file && printf "Created Service: \"${mountinfo['username']}@${mountinfo['domain']}.service\"\n" ||\
+    if write_service_file; then
+        printf "Created Service: \"${mountinfo['username']}@${mountinfo['domain']}.service\"\n"
+    else
         printf "Error writing service file.\n" && exit 1
+    fi
 
     post_run
 }
