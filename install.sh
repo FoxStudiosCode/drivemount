@@ -55,17 +55,21 @@ done 2>/dev/null &
 # utils
 function chk_mk_dir() {
     if [ "$#" -eq 1 ]; then
-        mkdir -p "$1"
+        if ! [ -d "$1" ]; then
+            mkdir -p "$1"
+        fi
     fi
 }
 
 
 # pre run preparations
 function pre_run() {
-    if ! sudo apt install -y davfs2 >/dev/null 2>&1; then
+    printf "Installing davfs2 via apt...\n"
+    if ! sudo apt install -y davfs2; then
         printf "Couldn't install davfs2 via apt. Aborting..\n"
         exit 1
     fi
+
 	sudo usermod -aG davfs2 $USER
     davfs_reconfig
 	if ! [ -d "$localbin_dir" ]; then
@@ -78,7 +82,9 @@ function pre_run() {
 }
 
 function davfs_reconfig() {
-    echo "davfs2 davfs2/suid_file boolean true" | sudo debconf-set-selections 
+    printf "Reconfiguring davfs2 to make sure user can mount drives.\n\
+        Confirm with \"yes\" if promted."
+    echo "davfs2 davfs2/suid_file boolean true" | sudo debconf-set-selections
     sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure davfs2
 }
 
@@ -107,12 +113,15 @@ function get_dir_mapping() {
 
 function write_config_to_files() {
     # writing secret file
+    printf "Writing drive authentication information to secret file...\t"
     chk_mk_dir "$davfs_dir"
     echo "# added automatically by drive mount service installation script" >> $davfs_secret_file
     printf "https://${mountinfo["domain"]}/remote.php/webdav\t${mountinfo["username"]}\t${mountinfo["password"]}\n" >> $davfs_secret_file
     chmod 600 "$davfs_secret_file"
+    printf "Done.\n"
 
     # write mapping
+    printf "Writing mapping to config file...\t"
     cat << EOF > "${localshare_dir}/${config_file_name}"
 declare -A mountinfo
 declare -A dirs
@@ -125,16 +134,20 @@ EOF
     for key in ${!dirs[@]};do
         echo "dirs[\"$key\"]=\"${dirs[$key]}\"" >> "${localshare_dir}/${config_file_name}"
     done
+    printf "Done.\n"
 
+    printf "Writing mounting config to /etc/fstab...\t"
     sudo tee -a /etc/fstab > /dev/null <<EOF
 # automatically added my drivemount install
 https://${mountinfo['domain']}/remote.php/webdav    ${HOME}/${mountinfo['username']}@${mountinfo['domain']} davfs  user,rw,noauto 0   0
 EOF
+    printf "Done.\n"
 
 }
 
 function write_service_file() {
     chk_mk_dir "$service_dir"
+    printf "Writing Service file to ${service_dir}/ ...\t"
     tee "${service_dir}/${mountinfo['username']}@${mountinfo['domain']}.service" > /dev/null <<EOF
 [Unit]
 Description=Mounting WebDav Drive and syncing local data
@@ -162,21 +175,25 @@ TimeoutStopSec=60s
 [Install]
 WantedBy=default.target
 EOF
-
+    printf "Done.\n"
 }
 
 function copy_executables() {
+    printf "Copying main scripts to ${localbin_dir} ...\t"
     cp "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/drivemount.sh" "${localbin_dir}/" || \
         printf "Error copying main script to \"${localbin_dir}\"\n" && exit 1
     cp "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/drivemount_wrapper.sh" "${localbin_dir}/" || \
         printf "Error copying wrapper script to \"${localbin_dir}\"\n" && exit 1
 	chmod +x "$localbin_dir"/drivemount*.sh
+    printf "Done.\n"
 }
 
 function create_mountpoint() {
+    printf "Creating mountpoint at ${HOME}/${mountinfo['username']}@${mountinfo['domain']}\t"
     if ! [ -d "${HOME}/${mountinfo['username']}@${mountinfo['domain']}" ]; then
         mkdir -p "${HOME}/${mountinfo['username']}@${mountinfo['domain']}"
     fi
+    printf "Done.\n"
 }
 
 function systemd_finisher() {
@@ -191,7 +208,7 @@ function post_run() {
     create_mountpoint
     copy_executables
     systemd_finisher
-    printf "Done.\n"
+    printf "Installer finished successfully.\n"
 }
 
 ##
@@ -220,7 +237,7 @@ function main() {
     get_user_input
     write_config_to_files
     write_service_file && printf "Created Service: \"${mountinfo['username']}@${mountinfo['domain']}.service\"\n" ||\
-        printf "Error writing service file." && exit 1
+        printf "Error writing service file.\n" && exit 1
 
     post_run
 }
