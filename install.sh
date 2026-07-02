@@ -69,7 +69,7 @@ function chk_mk_dir() {
 
 # pre run preparations
 function pre_run() {
-    printf "Installing davfs2 via apt..."
+    printf "Installing davfs2 via apt...\n"
     #printf "You will be asked if you want to enable user-level mounting."
     #printf "++ Please select \"Yes\"! ++"
     #read "Press Enter to continue." null
@@ -80,11 +80,12 @@ EOF
 
     if ! sudo apt install -y davfs2 -qq \
         -o Dpkg::Options::="--force-confdef" \
-        -o Dpkg::Options::="--force-confold"; then
+        -o Dpkg::Options::="--force-confold" \
+        > /dev/null; then
         printf "\nCouldn't install davfs2 via apt. Aborting..\n"
         exit 1
     else
-        printf "\tDone.\n"
+        printf "Done.\n"
     fi
 
 	sudo usermod -aG davfs2 $USER
