@@ -98,7 +98,7 @@ EOF
         mkdir -p "$localshare_dir"
     fi
 
-    cat <<EOF > "${davfs_dir}/davfs2.con"
+    cat <<EOF > "${davfs_dir}/davfs2.conf"
 $fstab_comment
 buf_size    64
 EOF
