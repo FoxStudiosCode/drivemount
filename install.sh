@@ -265,6 +265,19 @@ function fstab_cleaner() {
     sudo mv /etc/fstab.tmp /etc/fstab
 }
 
+function davfs_cleaner() {
+    printf "Removing entry from ${davfs_dir}/davfs2.conf...\n"
+    awk "
+    /^${fstab_comment}$/ {
+        getline
+        next
+    }
+    { print }
+    " "${davfs_dir}/davfs2.conf" | sudo tee "${davfs_dir}/davfs2.conf.tmp" >/dev/null
+
+     mv "${davfs_dir}/davfs2.conf.tmp" "${davfs_dir}/davfs2.conf"
+}
+
 function shadowdir_warning() {
     printf "\nThe following directories were left intact:\n"
     for localdir in "${!dirs[@]}"; do
@@ -320,6 +333,8 @@ function uninstall() {
 
         # calling fstab cleaner function
         fstab_cleaner
+        # calling davfs conf cleaner
+        davfs_cleaner
 
         # removing config file
         printf "Removing local config file..."
