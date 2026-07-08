@@ -29,6 +29,7 @@ davfs_dir="${HOME}/.davfs2"
 davfs_secret_file="${davfs_dir}/secrets"
 run_as_root="false"
 username="$(whoami)"
+fstab_comment="# automatically added by drivemount install"
 
 declare -A mountinfo
 declare -A dirs
@@ -162,7 +163,7 @@ EOF
 
     printf "Writing mounting config to /etc/fstab...\t"
     sudo tee -a /etc/fstab > /dev/null <<EOF
-# automatically added my drivemount install
+$fstab_comment
 https://${mountinfo['domain']}/remote.php/webdav    ${HOME}/${mountinfo['username']}@${mountinfo['domain']} davfs  user,rw,noauto 0   0
 EOF
     printf "Done.\n"
@@ -243,6 +244,107 @@ function post_run() {
     printf "Installer finished successfully.\n"
 }
 
+# uninstaller functions
+# called with --remove flag
+
+function fstab_cleaner() {
+    printf "Removing entry from /etc/fstab...\n"
+    sudo awk "
+    /^${fstab_comment}$/ {
+        getline
+        next
+    }
+    { print }
+    " /etc/fstab | sudo tee /etc/fstab.tmp >/dev/null
+
+    sudo mv /etc/fstab.tmp /etc/fstab
+}
+
+function shadowdir_warning() {
+    printf "\nThe following directories were left intact:\n"
+    for localdir in "${!dirs[@]}"; do
+        shadowdir="${HOME}/.$(echo $localdir | tr '[:upper:]' '[:lower:]')"
+        printf "\t$shadowdir\n"
+    done
+    printf "Remove them manually if no longer needed.\n"
+}
+
+# main uninstall function
+function uninstall() {
+    printf "Starting removal of DriveMount...\n"
+
+    # declaring variables
+    local config_file="${localshare_dir}/${config_file_name}"
+
+    if [ -f "$config_file" ]; then
+        . "$config_file"
+
+
+        service_name="${mountinfo['username']}@${mountinfo['domain']}.service"
+        mountpoint="${HOME}/${mountinfo['username']}@${mountinfo['domain']}"
+
+
+        # removing systemd service
+        printf "Stopping service $service_name..."
+        if systemctl --user stop "$service_name" 2>/dev/null; then
+            printf "\tDone\n"
+        else
+            printf "Error stopping service. Aborting removal.\n"
+            exit 1
+        fi
+
+        if ! systemctl --user disable "$service_name" 2>/dev/null; then
+            printf "Error disableing service. Aborting removal.\n"
+            exit 1
+        fi
+
+        printf "Removing Service..."
+        if rm -f "${service_dir}/${service_name}"; then
+            printf "\tDone.\n"
+        else
+            printf "\nError removing Service file \"${service_dir}/${service_name}\"\n"
+        fi
+
+        #removing mountpoint
+        printf "Removing mountpoint..."
+        if mountpoint "$mountpoint"; then
+            umount "$mountpoint" 2>/dev/null
+        fi
+        rmdir "$mountpoint" 2>/dev/null
+        printf "\tDone.\n"
+
+        # calling fstab cleaner function
+        fstab_cleaner
+
+        # removing config file
+        printf "Removing local config file..."
+        if rm -f "$config_file"; then
+            printf "\tDone.\n"
+        else
+            printf "\nError removing config file \"$config_file\"\n"
+        fi
+
+    else
+        printf "[WARNING] No local configuration file found at ${config_file}. Performing partial cleanup.\n"
+    fi
+
+    printf "Removing scripts..."
+    if rm -f "${localbin_dir}/drivemount.sh" "${localbin_dir}/drivemount_wrapper.sh"; then
+        printf "\tDone\n"
+    else
+        printf "\n[ERROR] Error removing scripts from ${localbin_dir}."
+    fi
+
+    printf "Reloading systemd..."
+    systemctl --user daemon-reload
+    printf "\tDone.\n"
+
+    shadowdir_warning
+
+    printf "\nRemoval completed.\n"
+
+}
+
 ##
 ## test functions
 ##
@@ -278,4 +380,12 @@ function main() {
 }
 
 # calling main function
-main
+# validating run mode
+if [ "$#" -eq 1 ] && [ "$1" = "--remove" ]; then
+    uninstall
+    exit 0
+else
+    main
+    exit 0
+fi
+
