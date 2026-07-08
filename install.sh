@@ -4,10 +4,10 @@
 # currently only optimized for nextcloud
 # other cloud provider might need manaul adjustment
 #
-# version: 1.0
+# version: 1.1
 # author: Niclas Fuchs
 # created: 26.06.2026
-# updated: 29.06.2026
+# updated: 08.07.2026
 
 # TODO:
 #   > add user to the davfs2 group - done
